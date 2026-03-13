@@ -100,7 +100,8 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-
+        const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
+        
         let html5QrcodeScanner;
 
         function switchTab(tab) {
@@ -189,24 +190,37 @@
             }
         }
 
-        // ฟังก์ชันพิเศษ: แอดมินสร้าง User
+        // ฟังก์ชันพิเศษ: แอดมินสร้าง User (ลง Auth และ Firestore พร้อมกัน)
         async function createUser() {
-            const email = document.getElementById('new-email').value;
+            const email = document.getElementById('new-email').value.trim();
             const pass = document.getElementById('new-password').value;
             const group = document.getElementById('new-group').value;
 
-            if(!email || !pass) return alert("กรุณากรอกข้อมูลให้ครบ");
+            if(!email || !pass || !group) return alert("กรุณากรอกข้อมูลและเลือกกลุ่มให้ครบครับ");
+            if(pass.length < 6) return alert("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ");
 
             try {
-                // บันทึกโปรไฟล์ลง Firestore ก่อน (เพื่อให้ User นั้นมีกลุ่มทันทีเมื่อ Login)
-                await db.collection("users").doc(email).set({ group: group });
-                alert("บันทึกสิทธิ์กลุ่มสำเร็จ! ต่อไปกรุณาแจ้ง User ให้สมัครสมาชิก หรือใช้ระบบ Admin SDK (เพื่อความปลอดภัยสูงสุด แนะนำให้แอดมินสร้าง User ใน Firebase Console หรือใช้ Email จริงในการสมัครครั้งแรกครับ)");
+                // 1. นำอีเมลและรหัสผ่านไปสมัครใน Authentication ผ่านแอปจำลอง
+                await secondaryApp.auth().createUserWithEmailAndPassword(email, pass);
                 
-                // ล้างช่องกรอก
+                // 2. สมัครเสร็จปุ๊บ สั่งให้แอปจำลอง Logout ทันที (เพื่อไม่ให้ค้างในระบบ)
+                await secondaryApp.auth().signOut();
+
+                // 3. นำข้อมูลกลุ่มไปบันทึกลง Firestore (ใช้บัญชีแอดมินหลักเป็นคนบันทึก)
+                await db.collection("users").doc(email).set({ 
+                    group: group,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                alert(`✅ สร้างบัญชี ${email} พร้อมกำหนดกลุ่ม ${group} เรียบร้อยแล้ว!`);
+                
+                // ล้างช่องกรอกข้อมูลให้ว่าง
                 document.getElementById('new-email').value = "";
                 document.getElementById('new-password').value = "";
+                
             } catch (e) {
-                alert("Error: " + e.message);
+                // ดักจับ Error เช่น อีเมลนี้มีคนใช้แล้ว หรือกรอกอีเมลผิดรูปแบบ
+                alert("เกิดข้อผิดพลาด: " + e.message);
             }
         }
 
@@ -253,6 +267,7 @@
     </script>
 </body>
 </html>
+
 
 
 
