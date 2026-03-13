@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner with Groups</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        .hidden { display: none; }
+        input { padding: 10px; margin: 5px; width: 80%; max-width: 300px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #reader { margin: 20px auto; max-width: 500px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-section">
+        <h3>กรุณาเข้าสู่ระบบ</h3>
+        <input type="email" id="email" placeholder="อีเมล"> <br>
+        <input type="password" id="password" placeholder="รหัสผ่าน"> <br>
+        <button onclick="login()">เข้าสู่ระบบ</button>
+    </div>
+
+    <div id="app-section" class="hidden">
+        <p>สวัสดี: <strong id="user-display"></strong></p>
+        <p>กลุ่ม: <strong id="group-display">กำลังโหลด...</strong></p>
+        <hr>
+        <div id="reader"></div>
+        <div id="result-panel" class="hidden">
+            <p>ข้อมูลที่สแกนได้: <span id="scanned-text"></span></p>
+            <button onclick="sendData()">ส่งข้อมูลเข้ากลุ่ม</button>
+        </div>
+        <br>
+        <button onclick="logout()" style="background:#dc3545;">ออกจากระบบ</button>
+    </div>
+
+    <script>
+        // --- 3. นำ Config จาก Firebase ของคุณมาใส่ตรงนี้ ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyD9QTsMO75IifgEYFKePVfG9BZg3BySzko",
+          authDomain: "scan-eccc9.firebaseapp.com",
+          projectId: "scan-eccc9",
+          storageBucket: "scan-eccc9.firebasestorage.app",
+          messagingSenderId: "988461584897",
+          appId: "1:988461584897:web:33782c1057aab0d0d62600",
+          measurementId: "G-JRSCDSSBMZ"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let lastResult = "";
+
+        // ฟังก์ชัน Login
+        function login() {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            auth.signInWithEmailAndPassword(email, pass)
+                .catch(error => alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message));
+        }
+
+        // ฟังก์ชัน Logout
+        function logout() {
+            auth.signOut().then(() => location.reload());
+        }
+
+        // ตรวจสอบสถานะการ Login
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('app-section').classList.remove('hidden');
+                document.getElementById('user-display').innerText = user.email;
+
+                // ดึงข้อมูลกลุ่มจาก Firestore (Collection: users / Doc ID: email)
+                db.collection("users").doc(user.email).get().then(doc => {
+                    if (doc.exists) {
+                        document.getElementById('group-display').innerText = doc.data().group;
+                    } else {
+                        document.getElementById('group-display').innerText = "ไม่มีกลุ่ม";
+                    }
+                });
+
+                startScanner();
+            }
+        });
+
+        // เริ่มต้นเครื่องสแกน
+        function startScanner() {
+            let scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            scanner.render((text) => {
+                lastResult = text;
+                document.getElementById('scanned-text').innerText = text;
+                document.getElementById('result-panel').classList.remove('hidden');
+                scanner.clear(); // หยุดสแกนชั่วคราว
+            });
+        }
+
+        // ส่งข้อมูล
+        function sendData() {
+            const group = document.getElementById('group-display').innerText;
+            const data = {
+                content: lastResult,
+                group: group,
+                sender: auth.currentUser.email,
+                time: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            // บันทึกลง Firestore ใน Collection "scans"
+            db.collection("scans").add(data).then(() => {
+                alert("ส่งข้อมูลสำเร็จ!");
+                location.reload();
+            });
+        }
+    </script>
+</body>
+</html>
