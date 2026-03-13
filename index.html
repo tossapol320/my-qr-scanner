@@ -59,18 +59,20 @@
     <audio id="beep-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
 
     <script>
-        // --- ส่วนที่ต้องแก้: นำ Config ของคุณมาใส่ที่นี่ ---
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        // นำค่าที่ได้จากหน้าจอ Firebase ของคุณมาวางทับตรงนี้เป๊ะๆ
+    const firebaseConfig = {
+      apiKey: "AIzaSyB...", // ค่าจากหน้าจอของคุณ
+      authDomain: "scan-eccc9.firebaseapp.com",
+      projectId: "scan-eccc9",
+      storageBucket: "scan-eccc9.appspot.com",
+      messagingSenderId: "988461584897",
+      appId: "1:988461584897:web:33782c1057aab0d0d62600"
+    };
+
+    // อย่าลืมบรรทัดเริ่มการทำงานด้านล่างนี้ด้วยนะครับ
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
         let html5QrcodeScanner;
         let lastResult = "";
@@ -166,3 +168,4 @@
     </script>
 </body>
 </html>
+
