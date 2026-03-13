@@ -59,25 +59,25 @@
     <audio id="beep-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
 
     <script>
-        // นำค่าที่ได้จากหน้าจอ Firebase ของคุณมาวางทับตรงนี้เป๊ะๆ
-    const firebaseConfig = {
-      apiKey: "AIzaSyB...", // ค่าจากหน้าจอของคุณ
-      authDomain: "scan-eccc9.firebaseapp.com",
-      projectId: "scan-eccc9",
-      storageBucket: "scan-eccc9.appspot.com",
-      messagingSenderId: "988461584897",
-      appId: "1:988461584897:web:33782c1057aab0d0d62600"
-    };
+        // 1. ตั้งค่า Firebase (วางไว้นอกสุดบนสุด)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9QTsMO75IifgEYFKePVfG9BZg3BySzko",
+            authDomain: "scan-eccc9.firebaseapp.com",
+            projectId: "scan-eccc9",
+            storageBucket: "scan-eccc9.firebasestorage.app",
+            messagingSenderId: "988461584897",
+            appId: "1:988461584897:web:33782c1057aab0d0d62600",
+            measurementId: "G-JRSCDSSBMZ"
+        };
 
-    // อย่าลืมบรรทัดเริ่มการทำงานด้านล่างนี้ด้วยนะครับ
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
         let html5QrcodeScanner;
         let lastResult = "";
 
-        // 1. ฟังก์ชัน Login
+        // 2. ฟังก์ชัน Login
         async function login() {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
@@ -88,17 +88,23 @@
             }
         }
 
-        // 2. ตรวจสอบสถานะ User
+        // 3. ตรวจสอบสถานะการเข้าใช้งาน
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('app-section').classList.remove('hidden');
                 document.getElementById('user-display').innerText = user.email;
                 
-                // ดึงกลุ่มจาก Firestore
-                const userDoc = await db.collection("users").doc(user.email).get();
-                if (userDoc.exists) {
-                    document.getElementById('group-display').innerText = "กลุ่ม: " + userDoc.data().group;
+                // ดึงข้อมูลกลุ่ม
+                try {
+                    const userDoc = await db.collection("users").doc(user.email).get();
+                    if (userDoc.exists) {
+                        document.getElementById('group-display').innerText = "กลุ่ม: " + userDoc.data().group;
+                    } else {
+                        document.getElementById('group-display').innerText = "กลุ่ม: ทั่วไป";
+                    }
+                } catch (e) {
+                    console.log("Error getting group:", e);
                 }
 
                 loadHistory(user.email);
@@ -106,18 +112,18 @@
             }
         });
 
-        // 3. ระบบสแกน
+        // 4. ระบบสแกน
         function startScanner() {
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
             html5QrcodeScanner.render(onScanSuccess);
         }
 
         function onScanSuccess(decodedText) {
-            document.getElementById('beep-sound').play(); // เล่นเสียง Beep
+            document.getElementById('beep-sound').play();
             lastResult = decodedText;
             document.getElementById('scanned-text').innerText = decodedText;
             document.getElementById('result-panel').classList.remove('hidden');
-            html5QrcodeScanner.clear(); // หยุดกล้องชั่วคราว
+            html5QrcodeScanner.clear();
         }
 
         function resetScanner() {
@@ -125,15 +131,15 @@
             startScanner();
         }
 
-        // 4. บันทึกข้อมูล
+        // 5. บันทึกข้อมูล
         async function sendData() {
             const user = auth.currentUser;
-            const group = document.getElementById('group-display').innerText.replace("กลุ่ม: ", "");
+            const groupText = document.getElementById('group-display').innerText.replace("กลุ่ม: ", "");
             
             try {
                 await db.collection("scans").add({
                     content: lastResult,
-                    group: group,
+                    group: groupText,
                     sender: user.email,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -145,27 +151,31 @@
             }
         }
 
-        // 5. โหลดประวัติ
+        // 6. โหลดประวัติ
         async function loadHistory(email) {
             const listDiv = document.getElementById('history-list');
             listDiv.innerHTML = "";
-            const snapshot = await db.collection("scans")
-                .where("sender", "==", email)
-                .orderBy("timestamp", "desc")
-                .limit(5)
-                .get();
-            
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const item = document.createElement('div');
-                item.className = 'history-item';
-                item.innerHTML = `<strong>${data.content}</strong><br><small>${data.timestamp?.toDate().toLocaleString() || 'กำลังส่ง...'}</small>`;
-                listDiv.appendChild(item);
-            });
+            try {
+                const snapshot = await db.collection("scans")
+                    .where("sender", "==", email)
+                    .orderBy("timestamp", "desc")
+                    .limit(5)
+                    .get();
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    item.innerHTML = `<strong>${data.content}</strong><br><small>${data.timestamp?.toDate().toLocaleString() || 'กำลังส่ง...'}</small>`;
+                    listDiv.appendChild(item);
+                });
+            } catch (e) {
+                console.log("Error loading history:", e);
+                listDiv.innerHTML = "<small>ยังไม่มีประวัติวันนี้</small>";
+            }
         }
 
         function logout() { auth.signOut().then(() => location.reload()); }
     </script>
 </body>
 </html>
-
