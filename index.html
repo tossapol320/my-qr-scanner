@@ -116,13 +116,20 @@
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('user-display').innerText = user.email;
                 
-                const doc = await db.collection("users").doc(user.email).get();
-                const userData = doc.data();
-                document.getElementById('group-display').innerText = "กลุ่ม: " + (userData ? userData.group : "ทั่วไป");
-                
-                // เช็คว่าเป็น Admin หรือไม่
-                if (userData && userData.group === 'Admin') {
-                    document.getElementById('btn-admin').classList.remove('hidden');
+                try {
+                    // พยายามดึงข้อมูลจาก Firestore
+                    const doc = await db.collection("users").doc(user.email).get();
+                    const userData = doc.data();
+                    document.getElementById('group-display').innerText = "กลุ่ม: " + (userData ? userData.group : "ทั่วไป");
+                    
+                    // เช็คว่าเป็น Admin หรือไม่
+                    if (userData && userData.group === 'Admin') {
+                        document.getElementById('btn-admin').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    // ถ้าระบบบล็อก จะเด้งหน้าต่างฟ้องทันที!
+                    alert("แจ้งเตือนจากระบบ: " + error.message);
+                    document.getElementById('group-display').innerText = "กลุ่ม: ❌ ติดสิทธิ์การอ่าน";
                 }
 
                 loadHistory(user.email);
@@ -194,3 +201,4 @@
     </script>
 </body>
 </html>
+
