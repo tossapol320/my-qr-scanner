@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Scanner Pro (Admin Mode)</title>
+    <title>QR Scanner Pro</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
 
     <style>
-        :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --bg: #f8fafc; --dark: #1e293b; }
+        :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f8fafc; --dark: #1e293b; }
         body { font-family: 'Kanit', sans-serif; background: var(--bg); margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .card { background: white; width: 95%; max-width: 450px; margin: 15px 0; padding: 25px; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); box-sizing: border-box; }
         
@@ -21,9 +21,11 @@
         .tab-btn.active { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); color: var(--primary); }
 
         input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 16px; font-family: 'Kanit'; }
-        button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; margin-top: 10px; font-family: 'Kanit'; }
+        button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; margin-top: 10px; font-family: 'Kanit'; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
         .hidden { display: none !important; }
         .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 13px; background: #dbeafe; color: var(--primary); font-weight: 600; }
+        .role-badge { display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 11px; background: #fef3c7; color: #b45309; margin-left: 5px; }
         .history-item { background: #f1f5f9; border-left: 5px solid var(--primary); padding: 10px; margin: 10px 0; border-radius: 8px; font-size: 14px; }
         .admin-only { border: 2px solid #fde047; }
     </style>
@@ -42,35 +44,43 @@
         <div class="tab-menu">
             <button id="btn-scan" class="tab-btn active" onclick="switchTab('scan')">📸 สแกน</button>
             <button id="btn-gen" class="tab-btn" onclick="switchTab('gen')">✍️ สร้าง QR</button>
-            <button id="btn-admin" class="tab-btn hidden" onclick="switchTab('admin')">⚙️ จัดการสมาชิก</button>
+            <button id="btn-admin" class="tab-btn hidden" onclick="switchTab('admin')">⚙️ แอดมิน</button>
         </div>
 
         <div id="scan-section" class="card">
-            <span class="status-badge" id="group-display">กลุ่ม: ...</span>
-            <div id="user-display" style="font-size: 12px; color: gray; margin: 5px 0;"></div>
-            <div id="reader"></div>
-            <div id="result-panel" class="hidden" style="background:#f0fdf4; padding:15px; border-radius:10px;">
-                <div id="scanned-text" style="font-weight:600; word-break:break-all;"></div>
-                <button onclick="sendData()" style="background:#10b981;">✅ บันทึกข้อมูล</button>
+            <div>
+                <span class="status-badge" id="group-display">กลุ่ม: ...</span>
+                <span class="role-badge" id="role-display">สิทธิ์: ...</span>
             </div>
+            <div id="user-display" style="font-size: 12px; color: gray; margin: 5px 0;"></div>
+            
+            <div id="reader" style="margin-top: 10px;"></div>
+            
+            <div id="result-panel" class="hidden" style="background:#f0fdf4; padding:15px; border-radius:10px; margin-top:10px;">
+                <div id="scanned-text" style="font-weight:600; word-break:break-all;"></div>
+                <button onclick="sendData()" style="background:var(--success);">✅ บันทึกข้อมูล</button>
+            </div>
+            
             <h3 style="margin-top:20px; font-size:16px;">ประวัติล่าสุด</h3>
             <div id="history-list"></div>
+
+            <button id="btn-download-report" class="hidden" onclick="exportToCSV()" style="background: var(--dark); margin-top: 15px;">📥 ดาวน์โหลดรายงานทั้งหมด (CSV)</button>
         </div>
 
         <div id="gen-section" class="card hidden">
             <h3>สร้าง QR Code</h3>
             <input type="text" id="qr-input" placeholder="ใส่ข้อความ...">
-            <button onclick="generateQR()" style="background:#10b981;">✨ สร้างภาพ</button>
+            <button onclick="generateQR()" style="background:var(--success);">✨ สร้างภาพ</button>
             <div id="qrcode" style="display:flex; justify-content:center; margin:20px 0;"></div>
         </div>
 
-       <div id="admin-section" class="card hidden admin-only">
+        <div id="admin-section" class="card hidden admin-only">
             <h3>⚙️ แผงควบคุมผู้ดูแล</h3>
             
             <div style="background: #f8fafc; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                <p style="margin-top: 0; font-size: 14px; font-weight: 600; color: var(--primary);">📁 สร้างกลุ่มผู้ใช้งานใหม่</p>
-                <input type="text" id="new-group-name" placeholder="ชื่อกลุ่ม (เช่น ฝ่ายบัญชี, จัดส่ง)">
-                <button onclick="createGroup()" style="background: #10b981; margin-top: 5px; font-size: 14px;">+ สร้างกลุ่ม</button>
+                <p style="margin-top: 0; font-size: 14px; font-weight: 600; color: var(--primary);">📁 สร้างกลุ่ม/แผนก ใหม่</p>
+                <input type="text" id="new-group-name" placeholder="ชื่อกลุ่ม (เช่น ฝ่ายบัญชี)">
+                <button onclick="createGroup()" style="background: var(--success); padding: 10px; font-size: 14px;">+ สร้างกลุ่ม</button>
             </div>
 
             <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin-bottom: 20px;">
@@ -78,9 +88,17 @@
             <p style="font-size: 14px; color: var(--dark); font-weight: 600; margin-bottom: 5px;">👤 เพิ่มพนักงานใหม่เข้าสู่ระบบ</p>
             <input type="email" id="new-email" placeholder="อีเมลพนักงานใหม่">
             <input type="password" id="new-password" placeholder="รหัสผ่าน (6 ตัวขึ้นไป)">
+            
             <select id="new-group">
                 <option value="">กำลังโหลดกลุ่ม...</option>
             </select>
+            
+            <select id="new-role" style="border-color: var(--warning); background: #fffbeb;">
+                <option value="user">ระดับ 3: ผู้ใช้งานทั่วไป (สแกนอย่างเดียว)</option>
+                <option value="superuser">ระดับ 2: ผู้ใช้งานระดับสูง (สแกน + โหลดรายงาน)</option>
+                <option value="admin">ระดับ 1: แอดมิน (จัดการทุกอย่าง)</option>
+            </select>
+
             <button onclick="createUser()" style="background: var(--dark);">➕ เพิ่มสมาชิกใหม่</button>
         </div>
 
@@ -88,22 +106,30 @@
     </div>
 
     <script>
+        // -----------------------------------------------------
+        // 1. ตั้งค่า Firebase (กรุณาใช้ Config ของโปรเจกต์ใหม่)
+        // -----------------------------------------------------
         const firebaseConfig = {
-          apiKey: "AIzaSyACN0jcbkvmHCcFmATO59pd5C85cWutNmc",
-          authDomain: "qr-scanner-v2-e60d5.firebaseapp.com",
-          projectId: "qr-scanner-v2-e60d5",
-          storageBucket: "qr-scanner-v2-e60d5.firebasestorage.app",
-          messagingSenderId: "350676411842",
-          appId: "1:350676411842:web:f16a2ecd2507ad3bb2a25b",
-          measurementId: "G-HT3R78DWQY"
+            apiKey: "AIzaSyACN0jcbkvmHCcFmATO59pd5C85cWutNmc",
+            authDomain: "qr-scanner-v2-e60d5.firebaseapp.com",
+            projectId: "qr-scanner-v2-e60d5",
+            storageBucket: "qr-scanner-v2-e60d5.firebasestorage.app",
+            messagingSenderId: "350676411842",
+            appId: "1:350676411842:web:f16a2ecd2507ad3bb2a25b"
         };
+        
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+        // สร้างแอปจำลองเพื่อใช้สร้าง User โดยแอดมินไม่หลุด
         const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
-        
+
         let html5QrcodeScanner;
 
+        // -----------------------------------------------------
+        // 2. ระบบ UI & เข้าสู่ระบบ
+        // -----------------------------------------------------
         function switchTab(tab) {
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -115,7 +141,7 @@
 
         async function login() {
             try { await auth.signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('password').value); }
-            catch (e) { alert("Login Error: " + e.message); }
+            catch (e) { alert("เข้าสู่ระบบไม่สำเร็จ: " + e.message); }
         }
 
         auth.onAuthStateChanged(async (user) => {
@@ -125,18 +151,32 @@
                 document.getElementById('user-display').innerText = user.email;
                 
                 try {
-                    // พยายามดึงข้อมูลจาก Firestore
                     const doc = await db.collection("users").doc(user.email).get();
                     const userData = doc.data();
-                    document.getElementById('group-display').innerText = "กลุ่ม: " + (userData ? userData.group : "ทั่วไป");
                     
-                    // เช็คว่าเป็น Admin หรือไม่
-                    if (userData && userData.group === 'Admin') {
-                        document.getElementById('btn-admin').classList.remove('hidden');
-                        loadGroups(); 
+                    // ดึงกลุ่ม (Group)
+                    document.getElementById('group-display').innerText = "กลุ่ม: " + (userData && userData.group ? userData.group : "ทั่วไป");
+                    
+                    // ดึงสิทธิ์ (Role) - ถ้าไอดีเก่าไม่มี role ระบบจะอนุโลมให้คนที่ชื่อกลุ่ม Admin เป็น admin
+                    const userRole = (userData && userData.role) ? userData.role : ((userData && userData.group === 'Admin') ? 'admin' : 'user');
+                    
+                    let roleText = "ทั่วไป";
+                    if(userRole === 'admin') roleText = "ผู้ดูแลระบบ";
+                    if(userRole === 'superuser') roleText = "ระดับสูง";
+                    document.getElementById('role-display').innerText = "สิทธิ์: " + roleText;
+                    
+                    // ควบคุมการแสดงผลปุ่มตาม Role
+                    if (userRole === 'admin') {
+                        document.getElementById('btn-admin').classList.remove('hidden'); // โชว์แท็บแอดมิน
+                        document.getElementById('btn-download-report').classList.remove('hidden'); // โชว์ปุ่มโหลด CSV
+                        loadGroups(); // โหลดรายชื่อกลุ่มเตรียมไว้
+                    } 
+                    else if (userRole === 'superuser') {
+                        document.getElementById('btn-download-report').classList.remove('hidden'); // โชว์ปุ่มโหลด CSV อย่างเดียว
                     }
+                    // ถ้าเป็น user ปกติ ปุ่มทั้งสองจะโดนซ่อนไว้ตามเดิม
+
                 } catch (error) {
-                    // ถ้าระบบบล็อก จะเด้งหน้าต่างฟ้องทันที!
                     alert("แจ้งเตือนจากระบบ: " + error.message);
                     document.getElementById('group-display').innerText = "กลุ่ม: ❌ ติดสิทธิ์การอ่าน";
                 }
@@ -145,86 +185,72 @@
                 startScanner();
             }
         });
-        // ฟังก์ชัน: ดึงรายชื่อกลุ่มทั้งหมดมาใส่ใน Dropdown
+
+        // -----------------------------------------------------
+        // 3. ระบบจัดการแอดมิน (สร้างกลุ่ม & สมาชิก)
+        // -----------------------------------------------------
         async function loadGroups() {
             const groupSelect = document.getElementById('new-group');
             groupSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
-            
             try {
-                // ดึงข้อมูลจาก Collection "groups"
                 const snapshot = await db.collection("groups").orderBy("name").get();
-                groupSelect.innerHTML = ''; // ล้างค่าเก่า
-                
+                groupSelect.innerHTML = '';
                 if (snapshot.empty) {
-                    // ถ้ายังไม่มีกลุ่มเลย ให้สร้างกลุ่ม Admin พื้นฐานไว้ก่อน
-                    await db.collection("groups").doc("Admin").set({ name: "Admin" });
-                    groupSelect.innerHTML = '<option value="Admin">Admin</option>';
+                    await db.collection("groups").doc("ส่วนกลาง").set({ name: "ส่วนกลาง" });
+                    groupSelect.innerHTML = '<option value="ส่วนกลาง">ส่วนกลาง</option>';
                 } else {
-                    // เอาชื่อกลุ่มมาต่อเรียงกันใน Dropdown
                     snapshot.forEach(doc => {
                         groupSelect.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
                     });
                 }
             } catch (e) {
-                console.log("โหลดกลุ่มไม่สำเร็จ:", e);
                 groupSelect.innerHTML = '<option value="ทั่วไป">ทั่วไป</option>';
             }
         }
 
-        // ฟังก์ชัน: แอดมินกดสร้างกลุ่มใหม่
         async function createGroup() {
             const groupName = document.getElementById('new-group-name').value.trim();
-            if (!groupName) return alert("กรุณาพิมพ์ชื่อกลุ่มก่อนครับ");
-
+            if (!groupName) return alert("กรุณาพิมพ์ชื่อกลุ่ม");
             try {
-                // บันทึกกลุ่มใหม่ลง Firestore
-                await db.collection("groups").doc(groupName).set({
-                    name: groupName,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                await db.collection("groups").doc(groupName).set({ name: groupName });
                 alert(`สร้างกลุ่ม "${groupName}" สำเร็จ!`);
-                document.getElementById('new-group-name').value = ""; // ล้างช่องพิมพ์
-                loadGroups(); // โหลด Dropdown ใหม่ทันที
-            } catch (e) {
-                alert("เกิดข้อผิดพลาดในการสร้างกลุ่ม: " + e.message);
-            }
+                document.getElementById('new-group-name').value = "";
+                loadGroups();
+            } catch (e) { alert("Error: " + e.message); }
         }
 
-        // ฟังก์ชันพิเศษ: แอดมินสร้าง User (ลง Auth และ Firestore พร้อมกัน)
         async function createUser() {
             const email = document.getElementById('new-email').value.trim();
             const pass = document.getElementById('new-password').value;
             const group = document.getElementById('new-group').value;
+            const role = document.getElementById('new-role').value; // ดึงค่าสิทธิ์มาด้วย
 
-            if(!email || !pass || !group) return alert("กรุณากรอกข้อมูลและเลือกกลุ่มให้ครบครับ");
-            if(pass.length < 6) return alert("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ");
+            if(!email || !pass || !group) return alert("กรุณากรอกข้อมูลให้ครบ");
+            if(pass.length < 6) return alert("รหัสผ่านขั้นต่ำ 6 ตัวอักษร");
 
             try {
-                // 1. นำอีเมลและรหัสผ่านไปสมัครใน Authentication ผ่านแอปจำลอง
+                // สร้างบัญชีด้วยแอปจำลอง
                 await secondaryApp.auth().createUserWithEmailAndPassword(email, pass);
-                
-                // 2. สมัครเสร็จปุ๊บ สั่งให้แอปจำลอง Logout ทันที (เพื่อไม่ให้ค้างในระบบ)
                 await secondaryApp.auth().signOut();
 
-                // 3. นำข้อมูลกลุ่มไปบันทึกลง Firestore (ใช้บัญชีแอดมินหลักเป็นคนบันทึก)
+                // บันทึกโปรไฟล์ลง Firestore (เก็บทั้ง Group และ Role)
                 await db.collection("users").doc(email).set({ 
                     group: group,
+                    role: role,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                alert(`✅ สร้างบัญชี ${email} พร้อมกำหนดกลุ่ม ${group} เรียบร้อยแล้ว!`);
-                
-                // ล้างช่องกรอกข้อมูลให้ว่าง
+                alert(`✅ สร้างไอดี ${email} \nกลุ่ม: ${group} \nสิทธิ์: ${role} เรียบร้อยแล้ว!`);
                 document.getElementById('new-email').value = "";
                 document.getElementById('new-password').value = "";
-                
             } catch (e) {
-                // ดักจับ Error เช่น อีเมลนี้มีคนใช้แล้ว หรือกรอกอีเมลผิดรูปแบบ
                 alert("เกิดข้อผิดพลาด: " + e.message);
             }
         }
 
-        // --- ส่วนงานอื่นๆ (Scan/Generate) เหมือนเดิม ---
+        // -----------------------------------------------------
+        // 4. ระบบสแกนและบันทึกข้อมูล
+        // -----------------------------------------------------
         function startScanner() {
             if(html5QrcodeScanner) html5QrcodeScanner.clear();
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
@@ -239,7 +265,8 @@
             const group = document.getElementById('group-display').innerText.replace("กลุ่ม: ", "");
             await db.collection("scans").add({
                 content: document.getElementById('scanned-text').innerText,
-                group: group, sender: auth.currentUser.email,
+                group: group, 
+                sender: auth.currentUser.email,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
             alert("บันทึกสำเร็จ");
@@ -258,16 +285,40 @@
             const list = document.getElementById('history-list'); list.innerHTML = "";
             snap.forEach(doc => {
                 const item = document.createElement('div'); item.className = 'history-item';
-                item.innerHTML = `<strong>${doc.data().content}</strong><br><small>${doc.data().timestamp?.toDate().toLocaleString()}</small>`;
+                item.innerHTML = `<strong>${doc.data().content}</strong><br><small>${doc.data().timestamp?.toDate().toLocaleString('th-TH')}</small>`;
                 list.appendChild(item);
             });
+        }
+
+        // -----------------------------------------------------
+        // 5. ระบบดาวน์โหลดรายงาน (CSV) - สำหรับ Admin/SuperUser
+        // -----------------------------------------------------
+        async function exportToCSV() {
+            try {
+                // ดึงข้อมูลการสแกนทั้งหมดมา
+                const snapshot = await db.collection("scans").orderBy("timestamp", "desc").get();
+                if (snapshot.empty) return alert("ยังไม่มีข้อมูลให้ดาวน์โหลดครับ");
+
+                // \uFEFF คือ BOM ช่วยให้ Excel เปิดไฟล์แล้วภาษาไทยไม่เพี้ยน
+                let csv = "\uFEFFวัน-เวลา,กลุ่ม,ผู้สแกน,ข้อมูลที่ได้\n"; 
+                
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const time = d.timestamp ? d.timestamp.toDate().toLocaleString('th-TH') : "";
+                    csv += `"${time}","${d.group}","${d.sender}","${d.content}"\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `รายงานสแกนคิวอาร์โค้ด.csv`;
+                link.click();
+            } catch (e) {
+                alert("เกิดข้อผิดพลาดในการโหลดไฟล์: " + e.message);
+            }
         }
 
         function logout() { auth.signOut().then(() => location.reload()); }
     </script>
 </body>
 </html>
-
-
-
-
