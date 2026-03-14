@@ -68,10 +68,20 @@
         </div>
 
         <div id="gen-section" class="card hidden">
-            <h3>สร้าง QR Code</h3>
-            <input type="text" id="qr-input" placeholder="ใส่ข้อความ...">
-            <button onclick="generateQR()" style="background:var(--success);">✨ สร้างภาพ</button>
-            <div id="qrcode" style="display:flex; justify-content:center; margin:20px 0;"></div>
+            <h3>✨ สร้าง QR Code ประจำจุด</h3>
+            
+            <input type="text" id="company-input" placeholder="ชื่อบริษัท (เช่น บริษัท ABC จำกัด)">
+            <input type="text" id="qr-input" placeholder="ชื่อจุด / ข้อมูล (เช่น จุดตรวจที่ 1)">
+            
+            <button onclick="generateQR()" style="background:var(--success);">✨ สร้างภาพ QR Code</button>
+            
+            <div id="hidden-qrcode" style="display:none;"></div>
+            
+            <div style="display:flex; justify-content:center; margin:20px 0;">
+                <canvas id="final-qr-canvas" style="display:none; border:1px solid #e2e8f0; border-radius:8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);"></canvas>
+            </div>
+
+            <button id="btn-download-qr" class="hidden" onclick="downloadQR()" style="background: var(--dark);">📥 ดาวน์โหลดรูปภาพคิวอาร์โค้ด</button>
         </div>
 
         <div id="admin-section" class="card hidden admin-only">
@@ -275,9 +285,73 @@
             startScanner();
         }
 
+        // ฟังก์ชัน: สร้างภาพ QR Code พร้อมใส่ข้อความด้านบน
         function generateQR() {
-            document.getElementById('qrcode').innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), { text: document.getElementById('qr-input').value, width: 200, height: 200 });
+            const company = document.getElementById('company-input').value.trim();
+            const locationText = document.getElementById('qr-input').value.trim();
+
+            if (!locationText) return alert("กรุณาใส่ชื่อจุด/ข้อมูล QR Code ก่อนครับ");
+
+            // ล้างข้อมูลเก่า
+            document.getElementById('hidden-qrcode').innerHTML = "";
+            const finalCanvas = document.getElementById('final-qr-canvas');
+            const ctx = finalCanvas.getContext('2d');
+            
+            // 1. สร้าง QR Code ดิบๆ ไว้ในที่ซ่อน
+            new QRCode(document.getElementById("hidden-qrcode"), { 
+                text: locationText, 
+                width: 200, 
+                height: 200,
+                correctLevel : QRCode.CorrectLevel.H // ทำให้คิวอาร์โค้ดชัดเจนขึ้น
+            });
+
+            // 2. รอให้ QR สร้างเสร็จแป๊บนึง แล้วค่อยเอามาวาดรวมกับข้อความ
+            setTimeout(() => {
+                const qrCanvas = document.querySelector('#hidden-qrcode canvas');
+                if(!qrCanvas) return alert("สร้าง QR ไม่สำเร็จ");
+
+                // กำหนดขนาดภาพสุดท้าย (กว้าง 280, สูง 340 เพื่อให้มีที่ว่างใส่ข้อความด้านบน)
+                finalCanvas.width = 280;
+                finalCanvas.height = 340;
+                finalCanvas.style.display = "block";
+
+                // เทพื้นหลังสีขาวล้วน
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+                // จัดกึ่งกลางตัวหนังสือ
+                ctx.textAlign = "center";
+                ctx.fillStyle = "#000000"; // สีดำ
+
+                // วาดข้อความที่ 1: ชื่อบริษัท (ถ้ามี)
+                ctx.font = "bold 18px Kanit, sans-serif";
+                if (company) {
+                    ctx.fillText(company, finalCanvas.width / 2, 35);
+                }
+
+                // วาดข้อความที่ 2: ชื่อจุด
+                ctx.font = "16px Kanit, sans-serif";
+                ctx.fillText("จุด: " + locationText, finalCanvas.width / 2, company ? 60 : 40);
+
+                // วาดภาพ QR Code ลงไปต่อจากข้อความ
+                const qrY = company ? 80 : 60; // ขยับลงมาถ้ามีชื่อบริษัท
+                ctx.drawImage(qrCanvas, (finalCanvas.width - 200)/2, qrY, 200, 200);
+
+                // โชว์ปุ่มดาวน์โหลด
+                document.getElementById('btn-download-qr').classList.remove('hidden');
+            }, 100); // ดีเลย์ 100ms เพื่อให้ชัวร์ว่าภาพวาดเสร็จ
+        }
+
+        // ฟังก์ชัน: เซฟรูปภาพลงเครื่อง
+        function downloadQR() {
+            const canvas = document.getElementById('final-qr-canvas');
+            const locationText = document.getElementById('qr-input').value.trim() || "QR";
+            
+            // แปลง Canvas เป็นไฟล์รูปภาพ (PNG) แล้วสั่งดาวน์โหลด
+            const link = document.createElement('a');
+            link.download = `QR_${locationText}.png`; // ตั้งชื่อไฟล์ตามชื่อจุดอัตโนมัติ
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         }
 
         async function loadHistory(email) {
