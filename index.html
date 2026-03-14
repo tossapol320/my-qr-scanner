@@ -365,28 +365,61 @@
         }
 
         // -----------------------------------------------------
-        // 5. ระบบดาวน์โหลดรายงาน (CSV) - สำหรับ Admin/SuperUser
+        // 5. ระบบดาวน์โหลดรายงาน (CSV) - แยกสิทธิ์ Admin และ Superuser
         // -----------------------------------------------------
         async function exportToCSV() {
             try {
-                // ดึงข้อมูลการสแกนทั้งหมดมา
-                const snapshot = await db.collection("scans").orderBy("timestamp", "desc").get();
+                // เช็คว่าคนที่กดโหลดอยู่กลุ่มไหน และมีสิทธิ์ระดับไหน
+                const currentGroup = document.getElementById('group-display').innerText.replace("กลุ่ม: ", "");
+                const currentRole = document.getElementById('role-display').innerText;
+
+                // ดึงข้อมูลทั้งหมดมาก่อน (วิธีนี้ช่วยป้องกันปัญหา Firebase Index Error)
+                const snapshot = await db.collection("scans").get();
                 if (snapshot.empty) return alert("ยังไม่มีข้อมูลให้ดาวน์โหลดครับ");
 
-                // \uFEFF คือ BOM ช่วยให้ Excel เปิดไฟล์แล้วภาษาไทยไม่เพี้ยน
-                let csv = "\uFEFFวัน-เวลา,กลุ่ม,ผู้สแกน,ข้อมูลที่ได้\n"; 
-                
+                let dataList = [];
+
                 snapshot.forEach(doc => {
                     const d = doc.data();
-                    const time = d.timestamp ? d.timestamp.toDate().toLocaleString('th-TH') : "";
-                    csv += `"${time}","${d.group}","${d.sender}","${d.content}"\n`;
+                    
+                    // เงื่อนไขคัดกรองข้อมูล: 
+                    // ถ้าเป็น "ระดับสูง" (Superuser) ให้เช็คว่าข้อมูลนี้ตรงกับกลุ่มของตัวเองไหม ถ้าไม่ตรงให้ข้ามไป
+                    if (currentRole.includes("ระดับสูง") && d.group !== currentGroup) {
+                        return; // ข้ามบรรทัดนี้ไป ไม่เอาลง Excel
+                    }
+                    
+                    // เก็บข้อมูลที่ผ่านเงื่อนไขลงใน Array
+                    dataList.push({
+                        timeRaw: d.timestamp ? d.timestamp.toDate() : new Date(0),
+                        timeStr: d.timestamp ? d.timestamp.toDate().toLocaleString('th-TH') : "ไม่มีเวลา",
+                        group: d.group || "ไม่ระบุ",
+                        sender: d.sender || "ไม่ระบุ",
+                        content: d.content || "ไม่มีข้อมูล"
+                    });
                 });
 
+                // ถ้ากรองแล้วไม่มีข้อมูลของกลุ่มตัวเองเลย
+                if (dataList.length === 0) return alert("ยังไม่มีข้อมูลการสแกนของกลุ่มคุณครับ");
+
+                // จัดเรียงข้อมูลจาก วันที่สแกนล่าสุด -> เก่าสุด
+                dataList.sort((a, b) => b.timeRaw - a.timeRaw);
+
+                // สร้างโครงสร้างไฟล์ CSV (\uFEFF ช่วยให้ Excel เปิดแล้วภาษาไทยไม่เพี้ยน)
+                let csv = "\uFEFFวัน-เวลา,กลุ่ม,ผู้สแกน,ข้อมูลที่ได้\n"; 
+                dataList.forEach(d => {
+                    csv += `"${d.timeStr}","${d.group}","${d.sender}","${d.content}"\n`;
+                });
+
+                // ตั้งชื่อไฟล์ (ถ้าเป็นแอดมินจะได้ชื่อ All_Groups ถ้าเป็นระดับสูงจะได้ชื่อกลุ่มตัวเอง)
+                const fileName = currentRole.includes("ผู้ดูแลระบบ") ? "รายงานทั้งหมด" : `รายงานกลุ่ม_${currentGroup}`;
+
+                // สั่งดาวน์โหลดลงเครื่อง
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(blob);
-                link.download = `รายงานสแกนคิวอาร์โค้ด.csv`;
+                link.download = `${fileName}.csv`;
                 link.click();
+
             } catch (e) {
                 alert("เกิดข้อผิดพลาดในการโหลดไฟล์: " + e.message);
             }
