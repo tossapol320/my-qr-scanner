@@ -333,7 +333,7 @@
                 document.getElementById('scanned-text').innerText = decodedText;
                 document.getElementById('result-panel').classList.remove('hidden');
                 html5QrcodeScanner.clear();
-            });
+            }); // <-- ลบวงเล็บที่เกินออกไปแล้วตรงนี้ครับ!
 
             // 🌟 บอทนักแปลภาษา (เวอร์ชันอัปเกรด แม่นยำ 100%)
             const translateTimer = setInterval(() => {
@@ -416,7 +416,7 @@
             const finalCanvas = document.getElementById('final-qr-canvas');
             const ctx = finalCanvas.getContext('2d');
             
-            // 🌟 แก้บั๊กภาษาไทย: แปลงข้อความเป็นรหัส UTF-8 ป้องกันตัวหนังสือเพี้ยนเป็น 
+            // 🌟 แก้บั๊กภาษาไทย: แปลงข้อความเป็นรหัส UTF-8 ป้องกันตัวหนังสือเพี้ยน
             const utf8Text = unescape(encodeURIComponent(locationText));
             
             // 1. สร้าง QR Code ดิบๆ ไว้ในที่ซ่อน (โยนรหัสที่แปลงแล้วเข้าไป)
