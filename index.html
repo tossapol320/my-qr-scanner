@@ -325,7 +325,7 @@
                 html5QrcodeScanner.clear();
             });
 
-            // 🌟 เพิ่มระบบบอทนักแปลภาษา (ทำงานอัตโนมัติทุกๆ 0.5 วินาที)
+            // 🌟 บอทนักแปลภาษา + บังคับใช้เฉพาะกล้องหลัง
             const translateTimer = setInterval(() => {
                 // เช็คว่าถ้าปิดกล้องไปแล้ว ให้หยุดการทำงานของบอท
                 const readerElement = document.getElementById('reader');
@@ -334,31 +334,44 @@
                     return;
                 }
 
-                // 1. แปลงคำว่า "Select Camera (X)" เป็น "เลือกกล้อง (X)"
+                // 1. เปลี่ยนข้อความ "Select Camera (X)" เป็น "เลือกกล้อง" เฉยๆ ให้ดูสะอาดตา
                 const textElements = document.querySelectorAll('#reader span, #reader div, #reader label');
                 textElements.forEach(el => {
-                    // ดักจับเฉพาะข้อความ เพื่อไม่ให้โครงสร้างเว็บพัง
                     if (el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
-                        if (el.innerText.includes('เลือกกล้อง')) {
-                            el.innerText = el.innerText.replace('เลือกกล้อง');
+                        if (el.innerText.includes('Select Camera')) {
+                            el.innerText = 'เลือกกล้อง'; // ตัดตัวเลขวงเล็บออกไปเลยเพื่อความสวยงาม
                         }
                     }
                 });
 
-                // 2. แปลงชื่อกล้องใน Dropdown ให้เป็นภาษาไทย
-                const options = document.querySelectorAll('#reader select option');
-                options.forEach(opt => {
-                    if (opt.innerText.toLowerCase().includes('camera')) {
-                        opt.innerText = opt.innerText.replace(/camera/i, 'กล้อง');
+                // 2. จัดการตัวเลือกกล้อง (ลบกล้องหน้าทิ้ง!)
+                const selectBox = document.querySelector('#reader select');
+                if (selectBox) {
+                    let hasFrontCameraRemoved = false;
+                    
+                    // วนลูปเช็คตัวเลือกกล้องทั้งหมดที่มี
+                    Array.from(selectBox.options).forEach(opt => {
+                        const text = opt.innerText.toLowerCase();
+                        
+                        // ถ้าเจอคำว่า front (กล้องหน้า) ให้ดึงตัวเลือกนี้ออกไปเลย
+                        if (text.includes('front')) {
+                            opt.remove();
+                            hasFrontCameraRemoved = true;
+                        } else {
+                            // แปลงชื่อกล้องที่เหลือ (กล้องหลัง) เป็นภาษาไทย
+                            let newText = opt.innerText;
+                            newText = newText.replace(/camera/gi, 'กล้อง');
+                            newText = newText.replace(/facing back/gi, 'กล้องหลัง');
+                            opt.innerText = newText;
+                        }
+                    });
+
+                    // ถ้ามีการลบกล้องหน้าออกไป ให้ระบบบังคับเลือกกล้องหลังที่เหลืออยู่เป็นค่าเริ่มต้นทันที
+                    if (hasFrontCameraRemoved && selectBox.options.length > 0) {
+                        selectBox.selectedIndex = 0; 
                     }
-                    if (opt.innerText.toLowerCase().includes('facing front')) {
-                        opt.innerText = opt.innerText.replace(/facing front/i, 'กล้องหน้า');
-                    }
-                    if (opt.innerText.toLowerCase().includes('facing back')) {
-                        opt.innerText = opt.innerText.replace(/facing back/i, 'กล้องหลัง');
-                    }
-                });
-            }, 500); // เช็คและแปลทุกๆ ครึ่งวินาที
+                }
+            }, 500); // เช็คและอัปเดตทุกๆ ครึ่งวินาที
         }
 
         async function sendData() {
