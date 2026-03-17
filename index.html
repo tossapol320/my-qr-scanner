@@ -403,48 +403,59 @@
         }
 
         // ฟังก์ชันโหลดประวัติล่าสุด (อัปเกรดใหม่ แก้ปัญหาไม่แสดงผล)
-        async function loadHistory(email) {
+       // ฟังก์ชันโหลดประวัติล่าสุด (อัปเกรด: โชว์ของทุกคนในกลุ่มเดียวกัน)
+        async function loadHistory() {
             try {
                 const list = document.getElementById('history-list'); 
-                list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center;'>กำลังโหลดประวัติ...</p>";
+                list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center;'>กำลังโหลดประวัติกลุ่ม...</p>";
                 
-                // ดึงข้อมูลเฉพาะของ User คนนี้มา (หลีกเลี่ยงการใช้ orderBy เพื่อไม่ให้ติด Error Index ของ Firebase)
-                const snap = await db.collection("scans").where("sender", "==", email).get();
+                // 1. ดึงชื่อกลุ่มปัจจุบันของคนที่กำลังใช้งานอยู่
+                const currentGroup = document.getElementById('group-display').innerText.replace("กลุ่ม: ", "");
+                
+                // 2. เปลี่ยนเงื่อนไขการค้นหา: ดึงข้อมูลสแกนทั้งหมดของ "กลุ่มนี้" (ไม่ใช่แค่อีเมลตัวเอง)
+                const snap = await db.collection("scans").where("group", "==", currentGroup).get();
                 list.innerHTML = "";
                 
-                let myScans = [];
+                let groupScans = [];
                 snap.forEach(doc => {
-                    myScans.push(doc.data());
+                    groupScans.push(doc.data());
                 });
 
-                // ถ้ายังไม่เคยสแกนเลย
-                if (myScans.length === 0) {
-                    list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center;'>ยังไม่มีประวัติการสแกน</p>";
+                // ถ้าในกลุ่มนี้ยังไม่มีใครเคยสแกนเลย
+                if (groupScans.length === 0) {
+                    list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center;'>ยังไม่มีประวัติการสแกนในกลุ่มคุณ</p>";
                     return;
                 }
 
                 // สั่งให้ JavaScript เรียงลำดับข้อมูลจากเวลาล่าสุด -> เก่าสุด
-                myScans.sort((a, b) => {
+                groupScans.sort((a, b) => {
                     const timeA = a.timestamp ? a.timestamp.toDate().getTime() : 0;
                     const timeB = b.timestamp ? b.timestamp.toDate().getTime() : 0;
                     return timeB - timeA;
                 });
 
-                // ตัดเอามาโชว์แค่ 3 อันดับแรก
-                const top3 = myScans.slice(0, 3);
+                // โชว์ 5 อันดับล่าสุด (เพิ่มจาก 3 เป็น 5 เพื่อให้เห็นความเคลื่อนไหวกลุ่มชัดเจนขึ้น)
+                const top5 = groupScans.slice(0, 5);
 
-                top3.forEach(data => {
+                top5.forEach(data => {
                     const item = document.createElement('div'); 
                     item.className = 'history-item';
                     
-                    // แปลงเวลาให้เป็นรูปแบบที่อ่านง่าย
                     const timeString = data.timestamp ? data.timestamp.toDate().toLocaleString('th-TH') : "กำลังบันทึกเวลา...";
                     
-                    item.innerHTML = `<strong>${data.content}</strong><br><small style="color:gray;">🕒 ${timeString}</small>`;
+                    // ปรับหน้าตาประวัติให้โชว์ว่า "ใคร" เป็นคนสแกน
+                    item.innerHTML = `
+                        <div style="font-size:15px; font-weight:600; color:var(--dark); margin-bottom:4px;">
+                            📌 ${data.content}
+                        </div>
+                        <div style="font-size:12px; color:gray; line-height:1.5;">
+                            👤 สแกนโดย: <span style="color:var(--primary);">${data.sender}</span><br>
+                            🕒 ${timeString}
+                        </div>
+                    `;
                     list.appendChild(item);
                 });
             } catch(e) {
-                // เผื่อมี Error อะไรหลุดมา จะได้แสดงข้อความให้เรารู้
                 document.getElementById('history-list').innerHTML = `<p style='font-size:12px; color:red;'>เกิดข้อผิดพลาด: ${e.message}</p>`;
             }
         }
