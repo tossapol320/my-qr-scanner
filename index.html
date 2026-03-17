@@ -64,7 +64,20 @@
             <h3 style="margin-top:20px; font-size:16px;">ประวัติล่าสุด</h3>
             <div id="history-list"></div>
 
-            <button id="btn-download-report" class="hidden" onclick="exportToCSV()" style="background: var(--dark); margin-top: 15px;">📥 ดาวน์โหลดรายงานทั้งหมด (CSV)</button>
+            <div id="date-filter-section" class="hidden" style="margin-top: 20px; background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box;">
+                <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: 600; color: var(--dark);">📅 ดาวน์โหลดรายงาน (CSV)</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 12px; color: gray;">ตั้งแต่วันที่:</label>
+                        <input type="date" id="start-date" style="margin: 5px 0; padding: 8px;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 12px; color: gray;">ถึงวันที่:</label>
+                        <input type="date" id="end-date" style="margin: 5px 0; padding: 8px;">
+                    </div>
+                </div>
+                <button onclick="exportToCSV()" style="background: var(--dark); margin-top: 5px; font-size: 14px;">📥 โหลดรายงานตามช่วงเวลา</button>
+            </div>
         </div>
 
         <div id="gen-section" class="card hidden">
@@ -155,10 +168,15 @@
         }
 
         auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-                document.getElementById('user-display').innerText = user.email;
+            // ควบคุมการแสดงผลปุ่มตาม Role
+                    if (userRole === 'admin') {
+                        document.getElementById('btn-admin').classList.remove('hidden'); 
+                        document.getElementById('date-filter-section').classList.remove('hidden'); // <-- เปลี่ยนชื่อ ID ตรงนี้
+                        loadGroups(); 
+                    } 
+                    else if (userRole === 'superuser') {
+                        document.getElementById('date-filter-section').classList.remove('hidden'); // <-- เปลี่ยนชื่อ ID ตรงนี้
+                    }
                 
                 try {
                     const doc = await db.collection("users").doc(user.email).get();
@@ -365,55 +383,73 @@
         }
 
         // -----------------------------------------------------
-        // 5. ระบบดาวน์โหลดรายงาน (CSV) - แยกสิทธิ์ Admin และ Superuser
+        // 5. ระบบดาวน์โหลดรายงาน (CSV) - กรองสิทธิ์ + กรองวันที่
         // -----------------------------------------------------
         async function exportToCSV() {
             try {
-                // เช็คว่าคนที่กดโหลดอยู่กลุ่มไหน และมีสิทธิ์ระดับไหน
                 const currentGroup = document.getElementById('group-display').innerText.replace("กลุ่ม: ", "");
                 const currentRole = document.getElementById('role-display').innerText;
 
-                // ดึงข้อมูลทั้งหมดมาก่อน (วิธีนี้ช่วยป้องกันปัญหา Firebase Index Error)
+                // ดึงค่าวันที่ ที่ผู้ใช้เลือกจากหน้าเว็บ
+                const startDateInput = document.getElementById('start-date').value;
+                const endDateInput = document.getElementById('end-date').value;
+
+                let startObj = null;
+                let endObj = null;
+
+                // แปลงเป็นรูปแบบเวลา (เริ่ม 00:00:00 ถึง 23:59:59)
+                if (startDateInput) {
+                    startObj = new Date(startDateInput);
+                    startObj.setHours(0, 0, 0, 0);
+                }
+                if (endDateInput) {
+                    endObj = new Date(endDateInput);
+                    endObj.setHours(23, 59, 59, 999);
+                }
+
+                // ดึงข้อมูลทั้งหมดมาก่อน
                 const snapshot = await db.collection("scans").get();
-                if (snapshot.empty) return alert("ยังไม่มีข้อมูลให้ดาวน์โหลดครับ");
+                if (snapshot.empty) return alert("ยังไม่มีข้อมูลในระบบเลยครับ");
 
                 let dataList = [];
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
                     
-                    // เงื่อนไขคัดกรองข้อมูล: 
-                    // ถ้าเป็น "ระดับสูง" (Superuser) ให้เช็คว่าข้อมูลนี้ตรงกับกลุ่มของตัวเองไหม ถ้าไม่ตรงให้ข้ามไป
+                    // 1. กรองสิทธิ์: ถ้าระดับสูง ให้เอาเฉพาะกลุ่มตัวเอง
                     if (currentRole.includes("ระดับสูง") && d.group !== currentGroup) {
-                        return; // ข้ามบรรทัดนี้ไป ไม่เอาลง Excel
+                        return; // ข้าม
                     }
-                    
-                    // เก็บข้อมูลที่ผ่านเงื่อนไขลงใน Array
+
+                    const recordDate = d.timestamp ? d.timestamp.toDate() : new Date(0);
+
+                    // 2. กรองวันที่: ถ้าข้อมูลอยู่นอกช่วงเวลาที่เลือก ให้ข้าม
+                    if (startObj && recordDate < startObj) return; 
+                    if (endObj && recordDate > endObj) return; 
+
+                    // ถ้าผ่านด่านทั้งหมด ก็เก็บข้อมูลเตรียมลง Excel
                     dataList.push({
-                        timeRaw: d.timestamp ? d.timestamp.toDate() : new Date(0),
-                        timeStr: d.timestamp ? d.timestamp.toDate().toLocaleString('th-TH') : "ไม่มีเวลา",
+                        timeRaw: recordDate,
+                        timeStr: recordDate.toLocaleString('th-TH'),
                         group: d.group || "ไม่ระบุ",
                         sender: d.sender || "ไม่ระบุ",
                         content: d.content || "ไม่มีข้อมูล"
                     });
                 });
 
-                // ถ้ากรองแล้วไม่มีข้อมูลของกลุ่มตัวเองเลย
-                if (dataList.length === 0) return alert("ยังไม่มีข้อมูลการสแกนของกลุ่มคุณครับ");
+                if (dataList.length === 0) return alert("ไม่พบข้อมูลในช่วงวันที่เลือกครับ");
 
-                // จัดเรียงข้อมูลจาก วันที่สแกนล่าสุด -> เก่าสุด
+                // จัดเรียงใหม่ ใหม่ล่าสุดอยู่บนสุด
                 dataList.sort((a, b) => b.timeRaw - a.timeRaw);
 
-                // สร้างโครงสร้างไฟล์ CSV (\uFEFF ช่วยให้ Excel เปิดแล้วภาษาไทยไม่เพี้ยน)
+                // สร้างไฟล์ CSV
                 let csv = "\uFEFFวัน-เวลา,กลุ่ม,ผู้สแกน,ข้อมูลที่ได้\n"; 
                 dataList.forEach(d => {
                     csv += `"${d.timeStr}","${d.group}","${d.sender}","${d.content}"\n`;
                 });
 
-                // ตั้งชื่อไฟล์ (ถ้าเป็นแอดมินจะได้ชื่อ All_Groups ถ้าเป็นระดับสูงจะได้ชื่อกลุ่มตัวเอง)
                 const fileName = currentRole.includes("ผู้ดูแลระบบ") ? "รายงานทั้งหมด" : `รายงานกลุ่ม_${currentGroup}`;
 
-                // สั่งดาวน์โหลดลงเครื่อง
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(blob);
