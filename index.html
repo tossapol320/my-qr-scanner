@@ -339,7 +339,7 @@
                 textElements.forEach(el => {
                     // ดักจับเฉพาะข้อความ เพื่อไม่ให้โครงสร้างเว็บพัง
                     if (el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
-                        if (el.innerText.includes('Select Camera')) {
+                        if (el.innerText.includes('เลือกกล้อง')) {
                             el.innerText = el.innerText.replace('Select Camera', 'เลือกกล้อง');
                         }
                     }
