@@ -130,7 +130,7 @@
 
     <script>
         // -----------------------------------------------------
-        // 1. ตั้งค่า Firebase (กรุณาใช้ Config ของโปรเจกต์ใหม่)
+        // 1. ตั้งค่า Firebase
         // -----------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyACN0jcbkvmHCcFmATO59pd5C85cWutNmc",
@@ -182,13 +182,10 @@
                     const userGroup = userData && userData.group ? userData.group : "ทั่วไป";
                     document.getElementById('group-display').innerText = "กลุ่ม: " + userGroup;
                     
-                    // 🌟 เพิ่มบรรทัดนี้: ดึงชื่อกลุ่มไปใส่ในช่อง "ชื่อบริษัท" หน้าสร้าง QR อัตโนมัติ!
+                    // ดึงชื่อกลุ่มไปใส่ในช่อง "ชื่อบริษัท" หน้าสร้าง QR อัตโนมัติ!
                     document.getElementById('company-input').value = userGroup;
                     
-                    // ... (โค้ดดึงสิทธิ์ Role และเช็คเงื่อนไขซ่อน/โชว์ปุ่ม ตามเดิม) ...
-                    
-                    // 3. กำหนดตัวแปร กลุ่ม และ สิทธิ์
-                    document.getElementById('group-display').innerText = "กลุ่ม: " + (userData && userData.group ? userData.group : "ทั่วไป");
+                    // กำหนดสิทธิ์
                     const userRole = (userData && userData.role) ? userData.role : ((userData && userData.group === 'Admin') ? 'admin' : 'user');
                     
                     let roleText = "ทั่วไป";
@@ -196,13 +193,15 @@
                     if(userRole === 'superuser') roleText = "ระดับสูง";
                     document.getElementById('role-display').innerText = "สิทธิ์: " + roleText;
                     
-                    // 4. ควบคุมการแสดงผลปุ่มตาม Role (ต้องอยู่ตรงนี้ เพราะรู้ค่า userRole แล้ว!)
+                    // ควบคุมการแสดงผลปุ่มตาม Role 
                     if (userRole === 'admin') {
                         document.getElementById('btn-admin').classList.remove('hidden'); 
+                        document.getElementById('btn-gen').classList.remove('hidden');
                         document.getElementById('date-filter-section').classList.remove('hidden'); 
                         loadGroups(); 
                     } 
                     else if (userRole === 'superuser') {
+                        document.getElementById('btn-gen').classList.remove('hidden');
                         document.getElementById('date-filter-section').classList.remove('hidden'); 
                     }
 
@@ -253,7 +252,7 @@
             const email = document.getElementById('new-email').value.trim();
             const pass = document.getElementById('new-password').value;
             const group = document.getElementById('new-group').value;
-            const role = document.getElementById('new-role').value; // ดึงค่าสิทธิ์มาด้วย
+            const role = document.getElementById('new-role').value; 
 
             if(!email || !pass || !group) return alert("กรุณากรอกข้อมูลให้ครบ");
             if(pass.length < 6) return alert("รหัสผ่านขั้นต่ำ 6 ตัวอักษร");
@@ -263,7 +262,7 @@
                 await secondaryApp.auth().createUserWithEmailAndPassword(email, pass);
                 await secondaryApp.auth().signOut();
 
-                // บันทึกโปรไฟล์ลง Firestore (เก็บทั้ง Group และ Role)
+                // บันทึกโปรไฟล์ลง Firestore
                 await db.collection("users").doc(email).set({ 
                     group: group,
                     role: role,
@@ -284,11 +283,11 @@
         function startScanner() {
             if(html5QrcodeScanner) html5QrcodeScanner.clear();
             
-            // เพิ่ม supportedScanTypes เพื่อบังคับให้ใช้แค่กล้องเท่านั้น
+            // บังคับให้ใช้แค่กล้องเท่านั้น
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
                 fps: 10, 
                 qrbox: 250,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] // <--- บรรทัดนี้ที่เพิ่มเข้ามา
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
             });
             
             html5QrcodeScanner.render((text) => {
@@ -329,7 +328,7 @@
                 text: locationText, 
                 width: 200, 
                 height: 200,
-                correctLevel : QRCode.CorrectLevel.H // ทำให้คิวอาร์โค้ดชัดเจนขึ้น
+                correctLevel : QRCode.CorrectLevel.H 
             });
 
             // 2. รอให้ QR สร้างเสร็จแป๊บนึง แล้วค่อยเอามาวาดรวมกับข้อความ
@@ -366,7 +365,7 @@
 
                 // โชว์ปุ่มดาวน์โหลด
                 document.getElementById('btn-download-qr').classList.remove('hidden');
-            }, 100); // ดีเลย์ 100ms เพื่อให้ชัวร์ว่าภาพวาดเสร็จ
+            }, 100); 
         }
 
         // ฟังก์ชัน: เซฟรูปภาพลงเครื่อง
