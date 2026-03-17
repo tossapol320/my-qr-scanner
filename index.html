@@ -406,9 +406,12 @@
             const finalCanvas = document.getElementById('final-qr-canvas');
             const ctx = finalCanvas.getContext('2d');
             
-            // 1. สร้าง QR Code ดิบๆ ไว้ในที่ซ่อน
+            // 🌟 แก้บั๊กภาษาไทย: แปลงข้อความเป็นรหัส UTF-8 ป้องกันตัวหนังสือเพี้ยนเป็น 
+            const utf8Text = unescape(encodeURIComponent(locationText));
+            
+            // 1. สร้าง QR Code ดิบๆ ไว้ในที่ซ่อน (โยนรหัสที่แปลงแล้วเข้าไป)
             new QRCode(document.getElementById("hidden-qrcode"), { 
-                text: locationText, 
+                text: utf8Text, 
                 width: 200, 
                 height: 200,
                 correctLevel : QRCode.CorrectLevel.H 
@@ -438,7 +441,7 @@
                     ctx.fillText(company, finalCanvas.width / 2, 35);
                 }
 
-                // วาดข้อความที่ 2: ชื่อจุด
+                // วาดข้อความที่ 2: ชื่อจุด (ใช้ข้อความภาษาไทยปกติวาดให้คนอ่าน)
                 ctx.font = "16px Kanit, sans-serif";
                 ctx.fillText("จุด: " + locationText, finalCanvas.width / 2, company ? 60 : 40);
 
