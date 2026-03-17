@@ -402,14 +402,51 @@
             link.href = canvas.toDataURL('image/png'); link.click();
         }
 
+        // ฟังก์ชันโหลดประวัติล่าสุด (อัปเกรดใหม่ แก้ปัญหาไม่แสดงผล)
         async function loadHistory(email) {
-            const snap = await db.collection("scans").where("sender", "==", email).orderBy("timestamp", "desc").limit(3).get();
-            const list = document.getElementById('history-list'); list.innerHTML = "";
-            snap.forEach(doc => {
-                const item = document.createElement('div'); item.className = 'history-item';
-                item.innerHTML = `<strong>${doc.data().content}</strong><br><small>${doc.data().timestamp?.toDate().toLocaleString('th-TH')}</small>`;
-                list.appendChild(item);
-            });
+            try {
+                const list = document.getElementById('history-list'); 
+                list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center;'>กำลังโหลดประวัติ...</p>";
+                
+                // ดึงข้อมูลเฉพาะของ User คนนี้มา (หลีกเลี่ยงการใช้ orderBy เพื่อไม่ให้ติด Error Index ของ Firebase)
+                const snap = await db.collection("scans").where("sender", "==", email).get();
+                list.innerHTML = "";
+                
+                let myScans = [];
+                snap.forEach(doc => {
+                    myScans.push(doc.data());
+                });
+
+                // ถ้ายังไม่เคยสแกนเลย
+                if (myScans.length === 0) {
+                    list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center;'>ยังไม่มีประวัติการสแกน</p>";
+                    return;
+                }
+
+                // สั่งให้ JavaScript เรียงลำดับข้อมูลจากเวลาล่าสุด -> เก่าสุด
+                myScans.sort((a, b) => {
+                    const timeA = a.timestamp ? a.timestamp.toDate().getTime() : 0;
+                    const timeB = b.timestamp ? b.timestamp.toDate().getTime() : 0;
+                    return timeB - timeA;
+                });
+
+                // ตัดเอามาโชว์แค่ 3 อันดับแรก
+                const top3 = myScans.slice(0, 3);
+
+                top3.forEach(data => {
+                    const item = document.createElement('div'); 
+                    item.className = 'history-item';
+                    
+                    // แปลงเวลาให้เป็นรูปแบบที่อ่านง่าย
+                    const timeString = data.timestamp ? data.timestamp.toDate().toLocaleString('th-TH') : "กำลังบันทึกเวลา...";
+                    
+                    item.innerHTML = `<strong>${data.content}</strong><br><small style="color:gray;">🕒 ${timeString}</small>`;
+                    list.appendChild(item);
+                });
+            } catch(e) {
+                // เผื่อมี Error อะไรหลุดมา จะได้แสดงข้อความให้เรารู้
+                document.getElementById('history-list').innerHTML = `<p style='font-size:12px; color:red;'>เกิดข้อผิดพลาด: ${e.message}</p>`;
+            }
         }
 
         // -----------------------------------------------------
