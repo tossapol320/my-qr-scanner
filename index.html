@@ -324,6 +324,41 @@
                 document.getElementById('result-panel').classList.remove('hidden');
                 html5QrcodeScanner.clear();
             });
+
+            // 🌟 เพิ่มระบบบอทนักแปลภาษา (ทำงานอัตโนมัติทุกๆ 0.5 วินาที)
+            const translateTimer = setInterval(() => {
+                // เช็คว่าถ้าปิดกล้องไปแล้ว ให้หยุดการทำงานของบอท
+                const readerElement = document.getElementById('reader');
+                if (!readerElement || readerElement.innerHTML === "") {
+                    clearInterval(translateTimer);
+                    return;
+                }
+
+                // 1. แปลงคำว่า "Select Camera (X)" เป็น "เลือกกล้อง (X)"
+                const textElements = document.querySelectorAll('#reader span, #reader div, #reader label');
+                textElements.forEach(el => {
+                    // ดักจับเฉพาะข้อความ เพื่อไม่ให้โครงสร้างเว็บพัง
+                    if (el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
+                        if (el.innerText.includes('Select Camera')) {
+                            el.innerText = el.innerText.replace('Select Camera', 'เลือกกล้อง');
+                        }
+                    }
+                });
+
+                // 2. แปลงชื่อกล้องใน Dropdown ให้เป็นภาษาไทย
+                const options = document.querySelectorAll('#reader select option');
+                options.forEach(opt => {
+                    if (opt.innerText.toLowerCase().includes('camera')) {
+                        opt.innerText = opt.innerText.replace(/camera/i, 'กล้อง');
+                    }
+                    if (opt.innerText.toLowerCase().includes('facing front')) {
+                        opt.innerText = opt.innerText.replace(/facing front/i, 'กล้องหน้า');
+                    }
+                    if (opt.innerText.toLowerCase().includes('facing back')) {
+                        opt.innerText = opt.innerText.replace(/facing back/i, 'กล้องหลัง');
+                    }
+                });
+            }, 500); // เช็คและแปลทุกๆ ครึ่งวินาที
         }
 
         async function sendData() {
