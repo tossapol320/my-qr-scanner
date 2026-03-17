@@ -28,34 +28,23 @@
         .role-badge { display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 11px; background: #fef3c7; color: #b45309; margin-left: 5px; }
         .history-item { background: #f1f5f9; border-left: 5px solid var(--primary); padding: 10px; margin: 10px 0; border-radius: 8px; font-size: 14px; }
         .admin-only { border: 2px solid #fde047; }
+        
         /* เปลี่ยนข้อความปุ่มขอสิทธิ์กล้อง */
-        #html5-qrcode-button-camera-permission {
-            font-size: 0 !important; /* ซ่อนคำภาษาอังกฤษเดิม */
-        }
+        #html5-qrcode-button-camera-permission { font-size: 0 !important; }
         #html5-qrcode-button-camera-permission::after {
-            content: 'กดเพื่อสแกน QR code'; /* ใส่คำภาษาไทยที่ต้องการ */
-            font-size: 16px !important; 
-            font-family: 'Kanit', sans-serif;
+            content: 'กดเพื่อสแกน QR code'; font-size: 16px !important; font-family: 'Kanit', sans-serif;
         }
         
-        /* เปลี่ยนข้อความปุ่มเริ่มสแกน (กรณีที่มันขึ้นว่า Start Scanning) */
-        #html5-qrcode-button-camera-start {
-            font-size: 0 !important;
-        }
+        /* เปลี่ยนข้อความปุ่มเริ่มสแกน */
+        #html5-qrcode-button-camera-start { font-size: 0 !important; }
         #html5-qrcode-button-camera-start::after {
-            content: 'เริ่มสแกน';
-            font-size: 16px !important;
-            font-family: 'Kanit', sans-serif;
+            content: 'เริ่มสแกน'; font-size: 16px !important; font-family: 'Kanit', sans-serif;
         }
         
-        /* เปลี่ยนข้อความปุ่มหยุดสแกน (Stop Scanning) */
-        #html5-qrcode-button-camera-stop {
-            font-size: 0 !important;
-        }
+        /* เปลี่ยนข้อความปุ่มหยุดสแกน */
+        #html5-qrcode-button-camera-stop { font-size: 0 !important; }
         #html5-qrcode-button-camera-stop::after {
-            content: 'หยุดสแกน';
-            font-size: 16px !important;
-            font-family: 'Kanit', sans-serif;
+            content: 'หยุดสแกน'; font-size: 16px !important; font-family: 'Kanit', sans-serif;
         }
     </style>
 </head>
@@ -174,9 +163,7 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // สร้างแอปจำลองเพื่อใช้สร้าง User โดยแอดมินไม่หลุด
         const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
-
         let html5QrcodeScanner;
 
         // -----------------------------------------------------
@@ -198,7 +185,6 @@
 
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                // 1. ซ่อนหน้า Login และโชว์หน้าแอปหลัก
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('user-display').innerText = user.email;
@@ -207,22 +193,16 @@
                     const doc = await db.collection("users").doc(user.email).get();
                     const userData = doc.data();
                     
-                    // ดึงกลุ่ม (Group)
                     const userGroup = userData && userData.group ? userData.group : "ทั่วไป";
                     document.getElementById('group-display').innerText = "กลุ่ม: " + userGroup;
-                    
-                    // ดึงชื่อกลุ่มไปใส่ในช่อง "ชื่อบริษัท" หน้าสร้าง QR อัตโนมัติ!
                     document.getElementById('company-input').value = userGroup;
                     
-                    // กำหนดสิทธิ์
                     const userRole = (userData && userData.role) ? userData.role : ((userData && userData.group === 'Admin') ? 'admin' : 'user');
-                    
                     let roleText = "ทั่วไป";
                     if(userRole === 'admin') roleText = "ผู้ดูแลระบบ";
                     if(userRole === 'superuser') roleText = "ระดับสูง";
                     document.getElementById('role-display').innerText = "สิทธิ์: " + roleText;
                     
-                    // ควบคุมการแสดงผลปุ่มตาม Role 
                     if (userRole === 'admin') {
                         document.getElementById('btn-admin').classList.remove('hidden'); 
                         document.getElementById('btn-gen').classList.remove('hidden');
@@ -233,9 +213,7 @@
                         document.getElementById('btn-gen').classList.remove('hidden');
                         document.getElementById('date-filter-section').classList.remove('hidden'); 
                     }
-
                 } catch (error) {
-                    alert("แจ้งเตือนจากระบบ: " + error.message);
                     document.getElementById('group-display').innerText = "กลุ่ม: ❌ ติดสิทธิ์การอ่าน";
                 }
 
@@ -257,9 +235,7 @@
                     await db.collection("groups").doc("ส่วนกลาง").set({ name: "ส่วนกลาง" });
                     groupSelect.innerHTML = '<option value="ส่วนกลาง">ส่วนกลาง</option>';
                 } else {
-                    snapshot.forEach(doc => {
-                        groupSelect.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
-                    });
+                    snapshot.forEach(doc => { groupSelect.innerHTML += `<option value="${doc.id}">${doc.id}</option>`; });
                 }
             } catch (e) {
                 groupSelect.innerHTML = '<option value="ทั่วไป">ทั่วไป</option>';
@@ -287,23 +263,15 @@
             if(pass.length < 6) return alert("รหัสผ่านขั้นต่ำ 6 ตัวอักษร");
 
             try {
-                // สร้างบัญชีด้วยแอปจำลอง
                 await secondaryApp.auth().createUserWithEmailAndPassword(email, pass);
                 await secondaryApp.auth().signOut();
-
-                // บันทึกโปรไฟล์ลง Firestore
                 await db.collection("users").doc(email).set({ 
-                    group: group,
-                    role: role,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    group: group, role: role, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                
                 alert(`✅ สร้างไอดี ${email} \nกลุ่ม: ${group} \nสิทธิ์: ${role} เรียบร้อยแล้ว!`);
                 document.getElementById('new-email').value = "";
                 document.getElementById('new-password').value = "";
-            } catch (e) {
-                alert("เกิดข้อผิดพลาด: " + e.message);
-            }
+            } catch (e) { alert("เกิดข้อผิดพลาด: " + e.message); }
         }
 
         // -----------------------------------------------------
@@ -312,58 +280,45 @@
         function startScanner() {
             if(html5QrcodeScanner) html5QrcodeScanner.clear();
             
-            // บังคับให้ใช้แค่กล้องเท่านั้น
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-                fps: 10, 
-                qrbox: 250,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
+                fps: 10, qrbox: 250, supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
             });
             
             html5QrcodeScanner.render((text) => {
-                // 🌟 เพิ่มระบบถอดรหัสภาษาไทย (Decode)
+                // 🌟 ระบบถอดรหัส (Decode) โฉมใหม่ ป้องกันภาษาต่างดาว 100%
                 let decodedText = text;
                 try {
-                    // ถอดรหัสข้อความที่สร้างจากแอปของเราให้กลับเป็นภาษาไทยปกติ
-                    decodedText = decodeURIComponent(escape(text));
+                    decodedText = decodeURIComponent(text);
                 } catch (e) {
-                    // ถ้าเป็นคิวอาร์โค้ดทั่วไปที่ไม่ได้เข้ารหัสไว้ ก็ให้อ่านค่าเดิมตามปกติ
                     decodedText = text;
                 }
 
                 document.getElementById('scanned-text').innerText = decodedText;
                 document.getElementById('result-panel').classList.remove('hidden');
                 html5QrcodeScanner.clear();
-            }); // <-- ลบวงเล็บที่เกินออกไปแล้วตรงนี้ครับ!
+            });
 
-            // 🌟 บอทนักแปลภาษา (เวอร์ชันอัปเกรด แม่นยำ 100%)
+            // 🌟 บอทนักแปลภาษา
             const translateTimer = setInterval(() => {
                 const readerElement = document.getElementById('reader');
                 if (!readerElement || readerElement.innerHTML === "") {
-                    clearInterval(translateTimer);
-                    return;
+                    clearInterval(translateTimer); return;
                 }
 
-                // 1. แปลงคำว่า "Select Camera" โดยค้นหาข้อความโดยตรง (ไม่กระทบโครงสร้างเว็บ)
                 const walker = document.createTreeWalker(readerElement, NodeFilter.SHOW_TEXT, null, false);
                 let node;
                 while (node = walker.nextNode()) {
-                    if (node.nodeValue.includes('Select Camera')) {
-                        node.nodeValue = 'เลือกกล้อง'; // เปลี่ยนเป็นภาษาไทย
-                    }
+                    if (node.nodeValue.includes('Select Camera')) node.nodeValue = 'เลือกกล้อง';
                 }
 
-                // 2. จัดการตัวเลือกกล้อง (ลบกล้องหน้าทิ้ง)
                 const selectBox = document.querySelector('#reader select');
                 if (selectBox) {
                     let hasFrontCameraRemoved = false;
-                    
                     Array.from(selectBox.options).forEach(opt => {
                         const text = opt.innerText.toLowerCase();
                         if (text.includes('front')) {
-                            opt.remove(); // เตะกล้องหน้าออกไป
-                            hasFrontCameraRemoved = true;
+                            opt.remove(); hasFrontCameraRemoved = true;
                         } else {
-                            // แปลงชื่อกล้องหลังที่เหลือเป็นภาษาไทย
                             let newText = opt.innerText;
                             newText = newText.replace(/camera/gi, 'กล้อง');
                             newText = newText.replace(/facing back/gi, 'กล้องหลัง');
@@ -371,23 +326,18 @@
                         }
                     });
 
-                    // 3. ฟีเจอร์พิเศษ: ถ้าเหลือกล้องหลังแค่ 1 ตัว ให้ซ่อนช่องเลือกกล้องไปเลย! (ดูคลีนขึ้น)
                     if (selectBox.options.length === 1) {
-                        selectBox.style.display = 'none'; // ซ่อน Dropdown กล้อง
-                        
-                        // ตามไปลบคำว่า "เลือกกล้อง" ทิ้งด้วย จะได้ไม่รกตา
+                        selectBox.style.display = 'none'; 
                         const hideWalker = document.createTreeWalker(readerElement, NodeFilter.SHOW_TEXT, null, false);
                         let hideNode;
                         while (hideNode = hideWalker.nextNode()) {
-                            if (hideNode.nodeValue.includes('เลือกกล้อง')) {
-                                hideNode.nodeValue = ''; 
-                            }
+                            if (hideNode.nodeValue.includes('เลือกกล้อง')) hideNode.nodeValue = ''; 
                         }
                     } else if (hasFrontCameraRemoved && selectBox.selectedIndex === -1) {
-                        selectBox.selectedIndex = 0; // เลือกกล้องหลังอัตโนมัติ
+                        selectBox.selectedIndex = 0;
                     }
                 }
-            }, 500); // เช็คและอัปเดตทุกๆ ครึ่งวินาที
+            }, 500); 
         }
 
         async function sendData() {
@@ -404,76 +354,52 @@
             startScanner();
         }
 
-        // ฟังก์ชัน: สร้างภาพ QR Code พร้อมใส่ข้อความด้านบน
+        // ฟังก์ชัน: สร้างภาพ QR Code
         function generateQR() {
             const company = document.getElementById('company-input').value.trim();
             const locationText = document.getElementById('qr-input').value.trim();
 
             if (!locationText) return alert("กรุณาใส่ชื่อจุด/ข้อมูล QR Code ก่อนครับ");
 
-            // ล้างข้อมูลเก่า
             document.getElementById('hidden-qrcode').innerHTML = "";
             const finalCanvas = document.getElementById('final-qr-canvas');
             const ctx = finalCanvas.getContext('2d');
             
-            // 🌟 แก้บั๊กภาษาไทย: แปลงข้อความเป็นรหัส UTF-8 ป้องกันตัวหนังสือเพี้ยน
-            const utf8Text = unescape(encodeURIComponent(locationText));
+            // 🌟 สำคัญมาก: เข้ารหัสภาษาไทยให้เป็นรูปแบบ URL-Safe ก่อนสร้างภาพ 
+            // (วิธีนี้รับประกันว่าเอาไปสแกนด้วยเว็บของเราแล้วภาษาไทยไม่แตกแน่นอน)
+            const safeText = encodeURIComponent(locationText);
             
-            // 1. สร้าง QR Code ดิบๆ ไว้ในที่ซ่อน (โยนรหัสที่แปลงแล้วเข้าไป)
             new QRCode(document.getElementById("hidden-qrcode"), { 
-                text: utf8Text, 
-                width: 200, 
-                height: 200,
-                correctLevel : QRCode.CorrectLevel.H 
+                text: safeText, width: 200, height: 200, correctLevel : QRCode.CorrectLevel.H 
             });
 
-            // 2. รอให้ QR สร้างเสร็จแป๊บนึง แล้วค่อยเอามาวาดรวมกับข้อความ
             setTimeout(() => {
                 const qrCanvas = document.querySelector('#hidden-qrcode canvas');
                 if(!qrCanvas) return alert("สร้าง QR ไม่สำเร็จ");
 
-                // กำหนดขนาดภาพสุดท้าย (กว้าง 280, สูง 340 เพื่อให้มีที่ว่างใส่ข้อความด้านบน)
-                finalCanvas.width = 280;
-                finalCanvas.height = 340;
-                finalCanvas.style.display = "block";
+                finalCanvas.width = 280; finalCanvas.height = 340; finalCanvas.style.display = "block";
+                ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+                ctx.textAlign = "center"; ctx.fillStyle = "#000000"; 
 
-                // เทพื้นหลังสีขาวล้วน
-                ctx.fillStyle = "#ffffff";
-                ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-
-                // จัดกึ่งกลางตัวหนังสือ
-                ctx.textAlign = "center";
-                ctx.fillStyle = "#000000"; // สีดำ
-
-                // วาดข้อความที่ 1: ชื่อบริษัท (ถ้ามี)
                 ctx.font = "bold 18px Kanit, sans-serif";
-                if (company) {
-                    ctx.fillText(company, finalCanvas.width / 2, 35);
-                }
+                if (company) ctx.fillText(company, finalCanvas.width / 2, 35);
 
-                // วาดข้อความที่ 2: ชื่อจุด (ใช้ข้อความภาษาไทยปกติวาดให้คนอ่าน)
                 ctx.font = "16px Kanit, sans-serif";
                 ctx.fillText("จุด: " + locationText, finalCanvas.width / 2, company ? 60 : 40);
 
-                // วาดภาพ QR Code ลงไปต่อจากข้อความ
-                const qrY = company ? 80 : 60; // ขยับลงมาถ้ามีชื่อบริษัท
+                const qrY = company ? 80 : 60; 
                 ctx.drawImage(qrCanvas, (finalCanvas.width - 200)/2, qrY, 200, 200);
 
-                // โชว์ปุ่มดาวน์โหลด
                 document.getElementById('btn-download-qr').classList.remove('hidden');
             }, 100); 
         }
 
-        // ฟังก์ชัน: เซฟรูปภาพลงเครื่อง
         function downloadQR() {
             const canvas = document.getElementById('final-qr-canvas');
             const locationText = document.getElementById('qr-input').value.trim() || "QR";
-            
-            // แปลง Canvas เป็นไฟล์รูปภาพ (PNG) แล้วสั่งดาวน์โหลด
             const link = document.createElement('a');
-            link.download = `QR_${locationText}.png`; // ตั้งชื่อไฟล์ตามชื่อจุดอัตโนมัติ
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            link.download = `QR_${locationText}.png`; 
+            link.href = canvas.toDataURL('image/png'); link.click();
         }
 
         async function loadHistory(email) {
@@ -487,31 +413,20 @@
         }
 
         // -----------------------------------------------------
-        // 5. ระบบดาวน์โหลดรายงาน (CSV) - กรองสิทธิ์ + กรองวันที่
+        // 5. ระบบดาวน์โหลดรายงาน (CSV) 
         // -----------------------------------------------------
         async function exportToCSV() {
             try {
                 const currentGroup = document.getElementById('group-display').innerText.replace("กลุ่ม: ", "");
                 const currentRole = document.getElementById('role-display').innerText;
 
-                // ดึงค่าวันที่ ที่ผู้ใช้เลือกจากหน้าเว็บ
                 const startDateInput = document.getElementById('start-date').value;
                 const endDateInput = document.getElementById('end-date').value;
 
-                let startObj = null;
-                let endObj = null;
+                let startObj = null, endObj = null;
+                if (startDateInput) { startObj = new Date(startDateInput); startObj.setHours(0, 0, 0, 0); }
+                if (endDateInput) { endObj = new Date(endDateInput); endObj.setHours(23, 59, 59, 999); }
 
-                // แปลงเป็นรูปแบบเวลา (เริ่ม 00:00:00 ถึง 23:59:59)
-                if (startDateInput) {
-                    startObj = new Date(startDateInput);
-                    startObj.setHours(0, 0, 0, 0);
-                }
-                if (endDateInput) {
-                    endObj = new Date(endDateInput);
-                    endObj.setHours(23, 59, 59, 999);
-                }
-
-                // ดึงข้อมูลทั้งหมดมาก่อน
                 const snapshot = await db.collection("scans").get();
                 if (snapshot.empty) return alert("ยังไม่มีข้อมูลในระบบเลยครับ");
 
@@ -519,50 +434,30 @@
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
-                    
-                    // 1. กรองสิทธิ์: ถ้าระดับสูง ให้เอาเฉพาะกลุ่มตัวเอง
-                    if (currentRole.includes("ระดับสูง") && d.group !== currentGroup) {
-                        return; // ข้าม
-                    }
+                    if (currentRole.includes("ระดับสูง") && d.group !== currentGroup) return; 
 
                     const recordDate = d.timestamp ? d.timestamp.toDate() : new Date(0);
-
-                    // 2. กรองวันที่: ถ้าข้อมูลอยู่นอกช่วงเวลาที่เลือก ให้ข้าม
                     if (startObj && recordDate < startObj) return; 
                     if (endObj && recordDate > endObj) return; 
 
-                    // ถ้าผ่านด่านทั้งหมด ก็เก็บข้อมูลเตรียมลง Excel
                     dataList.push({
-                        timeRaw: recordDate,
-                        timeStr: recordDate.toLocaleString('th-TH'),
-                        group: d.group || "ไม่ระบุ",
-                        sender: d.sender || "ไม่ระบุ",
-                        content: d.content || "ไม่มีข้อมูล"
+                        timeRaw: recordDate, timeStr: recordDate.toLocaleString('th-TH'),
+                        group: d.group || "ไม่ระบุ", sender: d.sender || "ไม่ระบุ", content: d.content || "ไม่มีข้อมูล"
                     });
                 });
 
                 if (dataList.length === 0) return alert("ไม่พบข้อมูลในช่วงวันที่เลือกครับ");
 
-                // จัดเรียงใหม่ ใหม่ล่าสุดอยู่บนสุด
                 dataList.sort((a, b) => b.timeRaw - a.timeRaw);
-
-                // สร้างไฟล์ CSV
                 let csv = "\uFEFFวัน-เวลา,กลุ่ม,ผู้สแกน,ข้อมูลที่ได้\n"; 
-                dataList.forEach(d => {
-                    csv += `"${d.timeStr}","${d.group}","${d.sender}","${d.content}"\n`;
-                });
+                dataList.forEach(d => { csv += `"${d.timeStr}","${d.group}","${d.sender}","${d.content}"\n`; });
 
                 const fileName = currentRole.includes("ผู้ดูแลระบบ") ? "รายงานทั้งหมด" : `รายงานกลุ่ม_${currentGroup}`;
-
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = `${fileName}.csv`;
-                link.click();
+                const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+                link.download = `${fileName}.csv`; link.click();
 
-            } catch (e) {
-                alert("เกิดข้อผิดพลาดในการโหลดไฟล์: " + e.message);
-            }
+            } catch (e) { alert("เกิดข้อผิดพลาดในการโหลดไฟล์: " + e.message); }
         }
 
         function logout() { auth.signOut().then(() => location.reload()); }
