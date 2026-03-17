@@ -275,7 +275,14 @@
         // -----------------------------------------------------
         function startScanner() {
             if(html5QrcodeScanner) html5QrcodeScanner.clear();
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            
+            // เพิ่ม supportedScanTypes เพื่อบังคับให้ใช้แค่กล้องเท่านั้น
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+                fps: 10, 
+                qrbox: 250,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] // <--- บรรทัดนี้ที่เพิ่มเข้ามา
+            });
+            
             html5QrcodeScanner.render((text) => {
                 document.getElementById('scanned-text').innerText = text;
                 document.getElementById('result-panel').classList.remove('hidden');
