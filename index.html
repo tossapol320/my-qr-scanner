@@ -325,40 +325,35 @@
                 html5QrcodeScanner.clear();
             });
 
-            // 🌟 บอทนักแปลภาษา + บังคับใช้เฉพาะกล้องหลัง
+            // 🌟 บอทนักแปลภาษา (เวอร์ชันอัปเกรด แม่นยำ 100%)
             const translateTimer = setInterval(() => {
-                // เช็คว่าถ้าปิดกล้องไปแล้ว ให้หยุดการทำงานของบอท
                 const readerElement = document.getElementById('reader');
                 if (!readerElement || readerElement.innerHTML === "") {
                     clearInterval(translateTimer);
                     return;
                 }
 
-                // 1. เปลี่ยนข้อความ "Select Camera (X)" เป็น "เลือกกล้อง" เฉยๆ ให้ดูสะอาดตา
-                const textElements = document.querySelectorAll('#reader span, #reader div, #reader label');
-                textElements.forEach(el => {
-                    if (el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
-                        if (el.innerText.includes('Select Camera')) {
-                            el.innerText = 'เลือกกล้อง'; // ตัดตัวเลขวงเล็บออกไปเลยเพื่อความสวยงาม
-                        }
+                // 1. แปลงคำว่า "Select Camera" โดยค้นหาข้อความโดยตรง (ไม่กระทบโครงสร้างเว็บ)
+                const walker = document.createTreeWalker(readerElement, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    if (node.nodeValue.includes('Select Camera')) {
+                        node.nodeValue = 'เลือกกล้อง'; // เปลี่ยนเป็นภาษาไทย
                     }
-                });
+                }
 
-                // 2. จัดการตัวเลือกกล้อง (ลบกล้องหน้าทิ้ง!)
+                // 2. จัดการตัวเลือกกล้อง (ลบกล้องหน้าทิ้ง)
                 const selectBox = document.querySelector('#reader select');
                 if (selectBox) {
                     let hasFrontCameraRemoved = false;
                     
-                    // วนลูปเช็คตัวเลือกกล้องทั้งหมดที่มี
                     Array.from(selectBox.options).forEach(opt => {
                         const text = opt.innerText.toLowerCase();
-                        
-                        // ถ้าเจอคำว่า front (กล้องหน้า) ให้ดึงตัวเลือกนี้ออกไปเลย
                         if (text.includes('front')) {
-                            opt.remove();
+                            opt.remove(); // เตะกล้องหน้าออกไป
                             hasFrontCameraRemoved = true;
                         } else {
-                            // แปลงชื่อกล้องที่เหลือ (กล้องหลัง) เป็นภาษาไทย
+                            // แปลงชื่อกล้องหลังที่เหลือเป็นภาษาไทย
                             let newText = opt.innerText;
                             newText = newText.replace(/camera/gi, 'กล้อง');
                             newText = newText.replace(/facing back/gi, 'กล้องหลัง');
@@ -366,9 +361,20 @@
                         }
                     });
 
-                    // ถ้ามีการลบกล้องหน้าออกไป ให้ระบบบังคับเลือกกล้องหลังที่เหลืออยู่เป็นค่าเริ่มต้นทันที
-                    if (hasFrontCameraRemoved && selectBox.options.length > 0) {
-                        selectBox.selectedIndex = 0; 
+                    // 3. ฟีเจอร์พิเศษ: ถ้าเหลือกล้องหลังแค่ 1 ตัว ให้ซ่อนช่องเลือกกล้องไปเลย! (ดูคลีนขึ้น)
+                    if (selectBox.options.length === 1) {
+                        selectBox.style.display = 'none'; // ซ่อน Dropdown กล้อง
+                        
+                        // ตามไปลบคำว่า "เลือกกล้อง" ทิ้งด้วย จะได้ไม่รกตา
+                        const hideWalker = document.createTreeWalker(readerElement, NodeFilter.SHOW_TEXT, null, false);
+                        let hideNode;
+                        while (hideNode = hideWalker.nextNode()) {
+                            if (hideNode.nodeValue.includes('เลือกกล้อง')) {
+                                hideNode.nodeValue = ''; 
+                            }
+                        }
+                    } else if (hasFrontCameraRemoved && selectBox.selectedIndex === -1) {
+                        selectBox.selectedIndex = 0; // เลือกกล้องหลังอัตโนมัติ
                     }
                 }
             }, 500); // เช็คและอัปเดตทุกๆ ครึ่งวินาที
