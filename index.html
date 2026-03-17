@@ -408,6 +408,7 @@
         }
 
         // ฟังก์ชันโหลดประวัติล่าสุด (อัปเกรด: แอดมินเห็นทั้งหมด, พนักงานเห็นเฉพาะกลุ่มตัวเอง)
+        // ฟังก์ชันโหลดประวัติล่าสุด (อัปเกรด: แอดมินเห็นทั้งหมด, พนักงานเห็นเฉพาะกลุ่มตัวเอง)
         async function loadHistory() {
             try {
                 const list = document.getElementById('history-list'); 
@@ -418,12 +419,10 @@
                 const currentRole = document.getElementById('role-display').innerText;
                 
                 let snap;
-                // 🌟 แยกเงื่อนไขการดึงข้อมูลตามสิทธิ์
+                // 🌟 แยกเงื่อนไข: ถ้าเป็นแอดมินให้ดึงของทุกคน ถ้าเป็นพนักงานดึงแค่กลุ่มตัวเอง
                 if (currentRole.includes("ผู้ดูแลระบบ")) {
-                    // ถ้าเป็นแอดมิน ดึงข้อมูลทั้งหมดในระบบมาเลย
-                    snap = await db.collection("scans").get();
+                    snap = await db.collection("scans").get(); // <--- แอดมินดึงหมดเลย
                 } else {
-                    // ถ้าเป็นพนักงาน ดึงเฉพาะกลุ่มตัวเอง
                     snap = await db.collection("scans").where("group", "==", currentGroup).get();
                 }
 
@@ -435,7 +434,7 @@
                 });
 
                 if (allScans.length === 0) {
-                    list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center;'>ยังไม่มีประวัติการสแกน</p>";
+                    list.innerHTML = "<p style='font-size:12px; color:gray; text-align:center;'>ยังไม่มีประวัติการสแกนในระบบ</p>";
                     return;
                 }
 
@@ -446,7 +445,7 @@
                     return timeB - timeA;
                 });
 
-                // แอดมินโชว์ 10 อันดับล่าสุด, พนักงานโชว์ 5 อันดับ
+                // แอดมินโชว์ 10 อันดับล่าสุด, พนักงานทั่วไปโชว์ 5 อันดับ
                 const limit = currentRole.includes("ผู้ดูแลระบบ") ? 10 : 5;
                 const topScans = allScans.slice(0, limit);
 
