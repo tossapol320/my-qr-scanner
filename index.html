@@ -168,24 +168,19 @@
         }
 
         auth.onAuthStateChanged(async (user) => {
-            // ควบคุมการแสดงผลปุ่มตาม Role
-                    if (userRole === 'admin') {
-                        document.getElementById('btn-admin').classList.remove('hidden'); 
-                        document.getElementById('date-filter-section').classList.remove('hidden'); // <-- เปลี่ยนชื่อ ID ตรงนี้
-                        loadGroups(); 
-                    } 
-                    else if (userRole === 'superuser') {
-                        document.getElementById('date-filter-section').classList.remove('hidden'); // <-- เปลี่ยนชื่อ ID ตรงนี้
-                    }
+            if (user) {
+                // 1. ซ่อนหน้า Login และโชว์หน้าแอปหลัก
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('user-display').innerText = user.email;
                 
                 try {
+                    // 2. ดึงข้อมูล User จากฐานข้อมูล
                     const doc = await db.collection("users").doc(user.email).get();
                     const userData = doc.data();
                     
-                    // ดึงกลุ่ม (Group)
+                    // 3. กำหนดตัวแปร กลุ่ม และ สิทธิ์
                     document.getElementById('group-display').innerText = "กลุ่ม: " + (userData && userData.group ? userData.group : "ทั่วไป");
-                    
-                    // ดึงสิทธิ์ (Role) - ถ้าไอดีเก่าไม่มี role ระบบจะอนุโลมให้คนที่ชื่อกลุ่ม Admin เป็น admin
                     const userRole = (userData && userData.role) ? userData.role : ((userData && userData.group === 'Admin') ? 'admin' : 'user');
                     
                     let roleText = "ทั่วไป";
@@ -193,16 +188,15 @@
                     if(userRole === 'superuser') roleText = "ระดับสูง";
                     document.getElementById('role-display').innerText = "สิทธิ์: " + roleText;
                     
-                    // ควบคุมการแสดงผลปุ่มตาม Role
+                    // 4. ควบคุมการแสดงผลปุ่มตาม Role (ต้องอยู่ตรงนี้ เพราะรู้ค่า userRole แล้ว!)
                     if (userRole === 'admin') {
-                        document.getElementById('btn-admin').classList.remove('hidden'); // โชว์แท็บแอดมิน
-                        document.getElementById('btn-download-report').classList.remove('hidden'); // โชว์ปุ่มโหลด CSV
-                        loadGroups(); // โหลดรายชื่อกลุ่มเตรียมไว้
+                        document.getElementById('btn-admin').classList.remove('hidden'); 
+                        document.getElementById('date-filter-section').classList.remove('hidden'); 
+                        loadGroups(); 
                     } 
                     else if (userRole === 'superuser') {
-                        document.getElementById('btn-download-report').classList.remove('hidden'); // โชว์ปุ่มโหลด CSV อย่างเดียว
+                        document.getElementById('date-filter-section').classList.remove('hidden'); 
                     }
-                    // ถ้าเป็น user ปกติ ปุ่มทั้งสองจะโดนซ่อนไว้ตามเดิม
 
                 } catch (error) {
                     alert("แจ้งเตือนจากระบบ: " + error.message);
