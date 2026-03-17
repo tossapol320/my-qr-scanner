@@ -83,7 +83,7 @@
         <div id="gen-section" class="card hidden">
             <h3>✨ สร้าง QR Code ประจำจุด</h3>
             
-            <input type="text" id="company-input" placeholder="ชื่อบริษัท (เช่น บริษัท ABC จำกัด)">
+            <input type="text" id="company-input" placeholder="กำลังโหลดข้อมูลบริษัท..." readonly style="background-color: #f1f5f9; color: #475569; cursor: not-allowed;">
             <input type="text" id="qr-input" placeholder="ชื่อจุด / ข้อมูล (เช่น จุดตรวจที่ 1)">
             
             <button onclick="generateQR()" style="background:var(--success);">✨ สร้างภาพ QR Code</button>
@@ -175,9 +175,17 @@
                 document.getElementById('user-display').innerText = user.email;
                 
                 try {
-                    // 2. ดึงข้อมูล User จากฐานข้อมูล
                     const doc = await db.collection("users").doc(user.email).get();
                     const userData = doc.data();
+                    
+                    // ดึงกลุ่ม (Group)
+                    const userGroup = userData && userData.group ? userData.group : "ทั่วไป";
+                    document.getElementById('group-display').innerText = "กลุ่ม: " + userGroup;
+                    
+                    // 🌟 เพิ่มบรรทัดนี้: ดึงชื่อกลุ่มไปใส่ในช่อง "ชื่อบริษัท" หน้าสร้าง QR อัตโนมัติ!
+                    document.getElementById('company-input').value = userGroup;
+                    
+                    // ... (โค้ดดึงสิทธิ์ Role และเช็คเงื่อนไขซ่อน/โชว์ปุ่ม ตามเดิม) ...
                     
                     // 3. กำหนดตัวแปร กลุ่ม และ สิทธิ์
                     document.getElementById('group-display').innerText = "กลุ่ม: " + (userData && userData.group ? userData.group : "ทั่วไป");
