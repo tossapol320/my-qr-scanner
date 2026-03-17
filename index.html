@@ -320,9 +320,20 @@
             });
             
             html5QrcodeScanner.render((text) => {
-                document.getElementById('scanned-text').innerText = text;
+                // 🌟 เพิ่มระบบถอดรหัสภาษาไทย (Decode)
+                let decodedText = text;
+                try {
+                    // ถอดรหัสข้อความที่สร้างจากแอปของเราให้กลับเป็นภาษาไทยปกติ
+                    decodedText = decodeURIComponent(escape(text));
+                } catch (e) {
+                    // ถ้าเป็นคิวอาร์โค้ดทั่วไปที่ไม่ได้เข้ารหัสไว้ ก็ให้อ่านค่าเดิมตามปกติ
+                    decodedText = text;
+                }
+
+                document.getElementById('scanned-text').innerText = decodedText;
                 document.getElementById('result-panel').classList.remove('hidden');
                 html5QrcodeScanner.clear();
+            });
             });
 
             // 🌟 บอทนักแปลภาษา (เวอร์ชันอัปเกรด แม่นยำ 100%)
