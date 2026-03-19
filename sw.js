@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qr-scanner-v2';
+const CACHE_NAME = 'qr-scanner-v4';
 
 // ติดตั้ง Service Worker
 self.addEventListener('install', (event) => {
